@@ -13,31 +13,35 @@
  */
 package com.facebook.presto.operator.aggregation.state;
 
-import com.facebook.presto.operator.aggregation.KeyValuePairs;
+import com.facebook.presto.operator.aggregation.MultiKeyValuePairs;
 import com.facebook.presto.spi.block.Block;
 import com.facebook.presto.spi.block.BlockBuilder;
 import com.facebook.presto.spi.function.AccumulatorStateSerializer;
 import com.facebook.presto.spi.type.Type;
-import com.facebook.presto.type.MapType;
+import com.facebook.presto.type.ArrayType;
+import com.facebook.presto.type.RowType;
+import com.google.common.collect.ImmutableList;
 
-public class KeyValuePairStateSerializer
-        implements AccumulatorStateSerializer<KeyValuePairsState>
+import java.util.Optional;
+
+public class MultiKeyValuePairStateSerializer
+        implements AccumulatorStateSerializer<MultiKeyValuePairsState>
 {
-    private final MapType mapType;
+    private final ArrayType serializedType;
 
-    public KeyValuePairStateSerializer(Type keyType, Type valueType)
+    public MultiKeyValuePairStateSerializer(Type keyType, Type valueType)
     {
-        this.mapType = new MapType(keyType, valueType);
+        this.serializedType = new ArrayType(new RowType(ImmutableList.of(keyType, valueType), Optional.empty()));
     }
 
     @Override
     public Type getSerializedType()
     {
-        return mapType;
+        return serializedType;
     }
 
     @Override
-    public void serialize(KeyValuePairsState state, BlockBuilder out)
+    public void serialize(MultiKeyValuePairsState state, BlockBuilder out)
     {
         if (state.get() == null) {
             out.appendNull();
@@ -48,8 +52,8 @@ public class KeyValuePairStateSerializer
     }
 
     @Override
-    public void deserialize(Block block, int index, KeyValuePairsState state)
+    public void deserialize(Block block, int index, MultiKeyValuePairsState state)
     {
-        state.set(new KeyValuePairs(mapType.getObject(block, index), state.getKeyType(), state.getValueType()));
+        state.set(new MultiKeyValuePairs(serializedType.getObject(block, index), state.getKeyType(), state.getValueType()));
     }
 }
